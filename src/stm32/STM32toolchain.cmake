@@ -1,4 +1,10 @@
-# STM32 "bare metal" toolchain
+# CANnuccia/src/stm32/STM32toolchain.cmake - CMake toolchain for arm-none-eabi
+#
+# Copyright (c) 2019, Paolo Jovon <paolo.jovon@gmail.com>
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 set(ARM_CPU "cortex-m3" CACHE STRING "The type of ARM core to compile for")
 set(ARM_PREFIX "arm-none-eabi" CACHE STRING "The prefix of the ARM crosscompiler toolchain")

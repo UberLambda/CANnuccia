@@ -43,18 +43,25 @@ CN_NORETURN void resetHandler(void)
     extern char _data_start; // ORIGIN(.data)
     extern char _data_end; // ORIGIN(.data) + LENGTH(.data)
     extern char _data_load_addr; // LOADADDR(.data)
+    extern char _bss_start; // ORIGIN(.bss)
+    extern char _bss_end; // ORIGIN(.bss) + LENGTH(.bss)
 
     // Enable 8-byte stack alignment to comply with AAPCS
     //BIT_SET(SCB->CCR, BIT_9);
 
     // Copy .data from FLASH to RAM
-    char *src = &_data_load_addr, *dst = &_data_start, *dataEnd = &_data_end;
-    while(dst < dataEnd)
+    char *src = &_data_load_addr, *dst = &_data_start, *end = &_data_end;
+    while(dst < end)
     {
         *dst++ = *src++;
     }
 
-    // (.bss is zero-filled by the linker script)
+    // Zero-fill .bss on RAM
+    dst = &_bss_start; end = &_bss_end;
+    while(dst < end)
+    {
+        *dst++ = 0;
+    }
 
     main();
     hcf();

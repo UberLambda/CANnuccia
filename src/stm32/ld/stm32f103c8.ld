@@ -81,7 +81,7 @@ SECTIONS
     /* Uninitialized or zero-filled R/W data. Basically just a zero-filled chunk
      * of RAM; holds uninitialized variables or variables initialized to only
      * contains zeroes (ex. `long foo = 0;`).
-     * `=0` makes the section zero-filled.
+     * Needs to be zero-filled by the program on chip reset.
      */
     .bss :
     {
@@ -91,6 +91,6 @@ SECTIONS
         *(COMMON)
         . = ALIGN(4);
         _bss_end = .;
-    } >RAM =0
+    } >RAM
 }
 

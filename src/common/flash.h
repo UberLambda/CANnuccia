@@ -18,10 +18,33 @@ int cnFlashUnlock(void);
 /// Returns true on success or false on error.
 int cnFlashLock(void);
 
-/// Writes `count` 16-bit words of `data` to flash, at `addr`.
+/// The size in bytes of a single page of flash memory.
+extern const unsigned CN_FLASH_PAGE_SIZE;
+
+/// Begins a write/erase cycle for the page starting at `addr` in flash, preparing
+/// data to be filled in with `cnFlashFill()`.
 /// Unlock flash with `cnFlashUnlock()` before use.
 /// Returns true on success or false on error.
-int cnFlashWrite(uintptr_t addr, unsigned count, const uint16_t data[count]);
+///
+/// On STM32: unlocks flash for writing, erases the flash page at `addr` and
+///           sets `FLASH_CR->PG`.
+/// On AVR: erases the flash page at `addr`.
+int cnFlashBeginWrite(uintptr_t addr);
+
+/// Copies `size` bytes of `data`, offset by `offset` bytes into the page currently
+/// being written to - see `cnFlashBeginWrite()`.
+/// Returns the number of bytes actually copied (0 on error).
+///
+/// On STM32: writes `data` to `page address + offset` directly, in blocks of 16 bits.
+/// On AVR: writes `data` to the internal scrap page, `offset` bytes into it, in blocks of 16 bits.
+unsigned cnFlashFill(uintptr_t offset, unsigned size, const uint8_t data[size]);
+
+/// Ends a write/erase cycle, committing the page write to flash.
+/// Returns true on success or false on error.
+///
+/// On STM32: clears `FLASH_CR->PG`.
+/// On AVR: copies the internal scrap page to the actual page to program in flash.
+int cnFlashEndWrite(void);
 
 /// Jumps from the bootloader to the user program.
 void cnJumpToProgram(void);

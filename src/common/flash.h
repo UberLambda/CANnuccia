@@ -18,10 +18,10 @@ int cnFlashUnlock(void);
 /// Returns true on success or false on error.
 int cnFlashLock(void);
 
-/// Writes `len` bytes of `data` to flash, at `addr`.
+/// Writes `count` 16-bit words of `data` to flash, at `addr`.
 /// Unlock flash with `cnFlashUnlock()` before use.
 /// Returns true on success or false on error.
-int cnFlashWrite(uintptr_t addr, unsigned len, const uint8_t data[len]);
+int cnFlashWrite(uintptr_t addr, unsigned count, const uint16_t data[count]);
 
 /// Jumps from the bootloader to the user program.
 void cnJumpToProgram(void);

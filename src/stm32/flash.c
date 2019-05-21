@@ -19,9 +19,11 @@ struct Flash
 };
 #define FLASH ((volatile struct Flash *)0x40022000)
 
-#define FLASH_KEY1 0x45670123
-#define FLASH_KEY2 0xCDEF89AB
-#define FLASH_CR_LOCK (1 << 7)
+#define FLASH_KEY1 0x45670123u
+#define FLASH_KEY2 0xCDEF89ABu
+#define FLASH_CR_LOCK 0x00000080u
+#define FLASH_CR_PG 0x00000001u
+#define FLASH_SR_BSY 0x00000001u
 
 int cnFlashUnlock(void)
 {
@@ -43,10 +45,28 @@ int cnFlashLock(void)
     return (FLASH->CR & FLASH_CR_LOCK);
 }
 
-int cnFlashWrite(uintptr_t addr, unsigned len, const uint8_t data[len])
+int cnFlashWrite(uintptr_t addr, unsigned count, const uint16_t data[count])
 {
-    // FIXME: Implement!
-    return -1;
+    if(FLASH->CR & FLASH_CR_LOCK)
+    {
+        // Flash locked, can't program it
+        return 0;
+    }
+    FLASH->CR |= FLASH_CR_PG;
+
+    // NOTE: Must write exactly 16 bits (half word) at a time or a bus error occurs
+    volatile uint16_t *dest = (volatile uint16_t *)addr;
+    const uint16_t *src = data;
+    unsigned written;
+    for(written = 0; written < count; written ++)
+    {
+        while(FLASH->SR & FLASH_SR_BSY) { }
+        *dest++ = *src++;
+    }
+    while(FLASH->SR & FLASH_SR_BSY) { }
+
+    FLASH->CR ^= FLASH_CR_PG; // (clear PG bit)
+    return 1;
 }
 
 void cnJumpToProgram(void)

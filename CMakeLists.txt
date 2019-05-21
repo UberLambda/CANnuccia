@@ -7,6 +7,9 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 cmake_minimum_required(VERSION 3.14)
-project(CANnuccia)
+project(CANnuccia C)
+
+set(CMAKE_C_STANDARD 99)
+set(CMAKE_C_STANDARD_REQUIRED YES)
 
 add_subdirectory(src/)

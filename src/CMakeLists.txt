@@ -6,16 +6,21 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-add_executable(cn
-    common/main.c
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
+
+add_library(cnSTM32 STATIC
     stm32/startup.c
+    stm32/flash.c
 )
 
-set_target_properties(cn PROPERTIES
-    LINKER_LANGUAGE C
-    C_STANDARD 99
-    C_STANDARD_REQUIRED YES
+add_executable(cn
+    common/main.c
 )
-target_include_directories(cn PUBLIC
-    "${CMAKE_CURRENT_SOURCE_DIR}"
+set_target_properties(cn PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
+    OUTPUT_NAME "cn"
+    SUFFIX ".bin"
+)
+target_link_libraries(cn PUBLIC
+    cnSTM32
 )

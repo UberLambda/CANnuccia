@@ -11,6 +11,7 @@ include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
 add_library(cnSTM32 STATIC
     stm32/startup.c
     stm32/flash.c
+    stm32/can.c
 )
 
 add_executable(cn

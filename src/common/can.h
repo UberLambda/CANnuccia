@@ -13,13 +13,16 @@
 /// Initializes the CAN bus.
 /// `id` and `mask` will be used to setup an ingoing message filter; CAN
 /// messages will be read only if `messageId & mask == id & mask`.
-/// The lowest 3 bits of `id` are IDE, RTR and 0.
+/// The highest 29 bits of `mask` mask the CAN id; the lowest 3 bits
+/// mask IDE, RTR and TXRQ.
 /// Returns true on success or false on error.
 int cnCANInit(uint32_t id, uint32_t mask);
 
 /// Sends a CAN message.
-/// The lowest 29 bits of `id` are used. `len` bytes of `data` are sent with the
-/// message; if `len > 8`, only the first 8 bytes are sent.
+/// `len` bytes of `data` are sent with the message; if `len > 8`, only the first
+/// 8 bytes are sent.
+/// The lowest 29 bits of `id` are the CAN id; the lowest 3 bits are IDE, RTR and
+/// unused respectively.
 /// Returns the number of bytes effectively sent, or a negative value on error.
 int cnCANSend(uint32_t id, unsigned len, const uint8_t data[len]);
 

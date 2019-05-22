@@ -12,8 +12,8 @@
 
 /// Initializes the CAN bus.
 /// `id` and `mask` will be used to setup an ingoing message filter; CAN
-/// messages will be read only if `messageId & mask == id & mask`
-/// (for their lowest 29 bits).
+/// messages will be read only if `messageId & mask == id & mask`.
+/// The lowest 3 bits of `id` are IDE, RTR and 0.
 /// Returns true on success or false on error.
 int cnCANInit(uint32_t id, uint32_t mask);
 

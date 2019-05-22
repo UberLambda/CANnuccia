@@ -7,10 +7,13 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "common/debug.h"
+#include "common/can.h"
 
 int main(void)
 {
     cnDebugInit();
+
+    cnCANInit(0x00000000, 0x00000000);
 
     volatile int i = 0;
     while(1)

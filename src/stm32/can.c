@@ -71,10 +71,15 @@ struct Can
 #define CAN_TSR_TME0 0x04000000u
 #define CAN_TSR_CODE 0x03000000u
 #define CAN_FMR_FINIT 0x00000001u
+#define CAN_DTR_DLC 0x00000003u
+#define CAN_RFR_RFOM 0x00000020u
+#define CAN_RFR_FOVR 0x00000010u
+#define CAN_RFR_FULL 0x00000008u
+#define CAN_RFR_FMP 0x00000003u
 
 
 /// Sets the CAN1 filter number `n` to the given 32-bit id & mask pair.
-inline void initCANFilter(unsigned n, uint32_t id, uint32_t mask)
+inline static void initCANFilter(unsigned n, uint32_t id, uint32_t mask)
 {
     const uint32_t fltBit = (1u << n);
     CAN1->FM1R &= ~fltBit; // CAN1: filter n in mask mode
@@ -123,8 +128,8 @@ int cnCANSend(uint32_t id, unsigned len, const uint8_t data[len])
 
     uint32_t mailboxId = (CAN1->TSR & CAN_TSR_CODE) >> 24; // First empty mailbox, 0..2
     CAN1->OUTBOX[mailboxId].IR = id & ~CAN_TIR_TXRQ; // Set id, IDE and RTR; ensure TXRQ is 0 for now
-    len = len <= 8 ? len : 8; // Max payload: 8 bytes - *truncate length accordingly*!
-    CAN1->OUTBOX[mailboxId].DTR = len; // Set Data Length Code
+    len = len <= 8 ? len : 8; // *Truncate length to 8*!
+    CAN1->OUTBOX[mailboxId].DTR = len & CAN_DTR_DLC; // Set Data Length Code
 
     // Copy data to DLR and DHR
     volatile uint8_t *dest = (volatile uint8_t *)&CAN1->OUTBOX[mailboxId].DLR;
@@ -139,6 +144,28 @@ int cnCANSend(uint32_t id, unsigned len, const uint8_t data[len])
 
 int cnCANRecv(uint32_t *recvId, unsigned maxLen, uint8_t data[maxLen])
 {
-    // FIXME IMPLEMENT!
-    return -1;
+    // assert(recvId);
+    // NOTE: Code always reads FIFO 0 - TODO: make it work also for FIFO 1
+
+    if(!(CAN1->RF0R & CAN_RFR_FMP))
+    {
+        // No messages pending on FIFO 0
+        return -1;
+    }
+
+    *recvId = CAN1->INBOX[0].IR; // Fetch FIFO 0 (CAN id, IDE, RTR)
+    unsigned payloadLen = CAN1->INBOX[0].DTR & CAN_DTR_DLC; // Fetch FIFO 0 payload length
+    maxLen = maxLen < payloadLen ? maxLen : payloadLen; // Truncate payload length to `maxLen`
+
+    // Copy data out of FIFO 0's DLR and DHR
+    volatile const uint8_t *src = (volatile const uint8_t *)&CAN1->INBOX[0].DLR;
+    for(unsigned i = 0; i < maxLen; i ++)
+    {
+        *data++ = *src++;
+    }
+
+    // Message processed, clear it from FIFO 0
+    CAN1->RF0R |= CAN_RFR_RFOM;
+
+    return (int)maxLen;
 }

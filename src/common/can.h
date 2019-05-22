@@ -28,7 +28,8 @@ int cnCANSend(uint32_t id, unsigned len, const uint8_t data[len]);
 
 /// Polls for a received CAN message.
 /// The lowest 29 bits of `*recvId` will be set to the id of the message, and
-/// up to `maxLen` bytes of its payload will be copied to `data`.
+/// up to `maxLen` bytes of its payload will be copied to `data`. The lowest 3
+/// bits of `*recvId` will be set to IDE, RTR and undefined.
 /// Returns the number of bytes effectively read, or a negative value if no
 /// message was received or if an error occurred.
 int cnCANRecv(uint32_t *recvId, unsigned maxLen, uint8_t data[maxLen]);

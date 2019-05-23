@@ -14,12 +14,18 @@ int main(void)
     cnDebugInit();
 
     cnCANInit(0x00000000, 0x00000000);
+    uint8_t data[] = {1, 2, 3, 4, 6, 8, 10, 12}, data2[] = {0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF};
 
     volatile int i = 0;
+    uint32_t recvId = 0;
     while(1)
     {
+        cnCANSend(0xF0F0F0F4, sizeof(data), data);
+        if(cnCANRecv(&recvId, sizeof(data2), data2) >= 0)
+        {
+            cnDebugLed(i % 2);
+            i ++;
+        }
         for(volatile int j = 0; j < 200000; j ++) { }
-        cnDebugLed(i % 2);
-        i ++;
     }
 }

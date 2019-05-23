@@ -57,12 +57,14 @@ struct Can
     uint32_t _reserved5[1];
     uint32_t FA1R;
     uint32_t _reserved6[8];
-    struct CanFilter FILTER[27];
+    struct CanFilter FILTER[28];
 };
 #define CAN1 ((volatile struct Can *)0x40006400)
+#define CAN_BTR_LBKM 0x40000000u
 #define CAN_TIR_TXRQ 0x00000001u
 #define CAN_MCR_ABOM 0x00000040u
 #define CAN_MCR_AWUM 0x00000020u
+#define CAN_MCR_SLEEP 0x00000002u
 #define CAN_MCR_INRQ 0x00000001u
 #define CAN_MSR_SLAK 0x00000002u
 #define CAN_MSR_INAK 0x00000001u
@@ -71,7 +73,7 @@ struct Can
 #define CAN_TSR_TME0 0x04000000u
 #define CAN_TSR_CODE 0x03000000u
 #define CAN_FMR_FINIT 0x00000001u
-#define CAN_DTR_DLC 0x00000003u
+#define CAN_DTR_DLC 0x0000000Fu
 #define CAN_RFR_RFOM 0x00000020u
 #define CAN_RFR_FOVR 0x00000010u
 #define CAN_RFR_FULL 0x00000008u
@@ -87,7 +89,7 @@ inline static void initCANFilter(unsigned n, uint32_t id, uint32_t mask)
     CAN1->FFA1R &= ~fltBit; // CAN1: filter n assigned to FIFO 0
     CAN1->FILTER[n].R1 = id;
     CAN1->FILTER[n].R2 = mask;
-    CAN1->FA1R = fltBit; // CAN1: filter 0 is active
+    CAN1->FA1R |= fltBit; // CAN1: filter 0 is active
 }
 
 int cnCANInit(uint32_t id, uint32_t mask)
@@ -112,8 +114,12 @@ int cnCANInit(uint32_t id, uint32_t mask)
     CAN1->MCR |= CAN_MCR_AWUM | CAN_MCR_ABOM; // Auto wakeup on message rx, auto bus-off on 128 errors
     // TODO: set other CAN options if needed (NART, RFLM, TXFP, ABOM...)
 
+    // FIXME: Set BTR here to change the CAN baud rate; optionally set
+    //        CAN_BTR_LBKM to enable loopback for debugging
+
     CAN1->MCR &= ~CAN_MCR_INRQ; // Ask CAN1 to enter normal mode
-    while(CAN1->MSR & CAN_MSR_INAK) { } // Wait for CAN1 to sync, exiting init mode
+    while(CAN1->MSR & CAN_MSR_INAK) { } // Wait for CAN1 to exiting init mode
+    CAN1->MCR &= ~CAN_MCR_SLEEP; // Wake CAN1 from sleep. It should now sync...
 
     return 1;
 }
@@ -132,10 +138,33 @@ int cnCANSend(uint32_t id, unsigned len, const uint8_t data[len])
     CAN1->OUTBOX[mailboxId].DTR = len & CAN_DTR_DLC; // Set Data Length Code
 
     // Copy data to DLR and DHR
-    volatile uint8_t *dest = (volatile uint8_t *)&CAN1->OUTBOX[mailboxId].DLR;
-    for(unsigned i = 0; i < len; i ++)
+    // WARNING: The ARM core does NOT support unaligned access; copying byte
+    //          arrays directly will corrupt the data - need the ugly switch
+    //          below or a `memcpy()`!
+    volatile uint32_t *DHR = &CAN1->OUTBOX[mailboxId].DHR, *DLR = &CAN1->OUTBOX[mailboxId].DLR;
+    *DHR = 0;
+    *DLR = 0;
+    switch(len)
     {
-        *dest++ = *data++;
+    case 8:
+    default:
+        *DHR |= ((uint32_t)data[7] << 24);
+    case 7:
+        *DHR |= ((uint32_t)data[6] << 16);
+    case 6:
+        *DHR |= ((uint32_t)data[5] << 8);
+    case 5:
+        *DHR |= data[4];
+    case 4:
+        *DLR |= ((uint32_t)data[3] << 24);
+    case 3:
+        *DLR |= ((uint32_t)data[2] << 16);
+    case 2:
+        *DLR |= ((uint32_t)data[1] << 8);
+    case 1:
+        *DLR |= data[0];
+    case 0:
+        break;
     }
 
     CAN1->OUTBOX[mailboxId].IR |= CAN_TIR_TXRQ; // Trigger transmission
@@ -158,10 +187,31 @@ int cnCANRecv(uint32_t *recvId, unsigned maxLen, uint8_t data[maxLen])
     maxLen = maxLen < payloadLen ? maxLen : payloadLen; // Truncate payload length to `maxLen`
 
     // Copy data out of FIFO 0's DLR and DHR
-    volatile const uint8_t *src = (volatile const uint8_t *)&CAN1->INBOX[0].DLR;
-    for(unsigned i = 0; i < maxLen; i ++)
+    // WARNING: The ARM core does NOT support unaligned access; copying byte
+    //          arrays directly will corrupt the data - need the ugly switch
+    //          below or a `memcpy()`!
+    volatile const uint32_t *DHR = &CAN1->INBOX[0].DHR, *DLR = &CAN1->INBOX[0].DLR;
+    switch(maxLen)
     {
-        *data++ = *src++;
+    case 8:
+    default:
+        data[7] = (uint8_t)((*DHR & 0xFF000000u) >> 24);
+    case 7:
+        data[6] = (uint8_t)((*DHR & 0x00FF0000u) >> 16);
+    case 6:
+        data[5] = (uint8_t)((*DHR & 0x0000FF00u) >> 8);
+    case 5:
+        data[4] = (uint8_t)(*DHR & 0x000000FFu);
+    case 4:
+        data[3] = (uint8_t)((*DLR & 0xFF000000u) >> 24);
+    case 3:
+        data[2] = (uint8_t)((*DLR & 0x00FF0000u) >> 16);
+    case 2:
+        data[1] = (uint8_t)((*DLR & 0x0000FF00u) >> 8);
+    case 1:
+        data[0] = (uint8_t)(*DLR & 0x000000FFu);
+    case 0:
+        break;
     }
 
     // Message processed, clear it from FIFO 0

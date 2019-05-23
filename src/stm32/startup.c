@@ -31,6 +31,37 @@
 // *****************************************************************************
 
 #include "common/cc.h"
+#include <stdint.h>
+
+
+// See the STM32F10X manual, RCC (medium density devices) section
+#define RCC_CR (*(volatile uint32_t *)0x40021000)
+#define RCC_CR_PLLRDY 0x02000000u
+#define RCC_CR_PLLON 0x01000000u
+#define RCC_CR_HSERDY 0x00020000u
+#define RCC_CR_HSEON 0x00010000u
+#define RCC_CR_HSION 0x00000001u
+#define RCC_CFGR (*(volatile uint32_t *)0x40021004)
+#define FLASH_ACR (*(volatile uint32_t *)0x40022000)
+#define FLASH_ACR_PRFTBE 0x00000010u
+
+/// Enables the 8MHz external crystal to get a 72MHz PLL clock
+// See: https://www.stm32duino.com/viewtopic.php?t=4190
+static void enableHSE(void)
+{
+    RCC_CR |= RCC_CR_HSEON; // Enable external crystal
+    while(!(RCC_CR & RCC_CR_HSERDY)) { } // Wait for crystal...
+
+    FLASH_ACR = FLASH_ACR_PRFTBE | 0x2; // Flash prefetch on, 2 flash wait states (clock > 48MHz)
+    RCC_CFGR |= 0x5d0400u; // No clock out, USB clock /1.5, PLL is (HSE x9), APB1 clock /2
+
+    RCC_CR |= RCC_CR_PLLON; // Enable PLL
+    while(!(RCC_CR & RCC_CR_PLLRDY)) { } // Wait for PLL...
+
+    RCC_CFGR |= 0x2; // Set PLL as system clock source
+    while(!(RCC_CFGR & 0x8)) { } // Wait for clock source to change...
+}
+
 
 /// An ISR that spinlocks forever.
 /// Used as a fallback for when no real ISR is implemented.
@@ -70,6 +101,8 @@ CN_NORETURN void resetHandler(void)
     {
         *dst++ = 0;
     }
+
+    enableHSE();
 
     main();
     hcf();

@@ -44,22 +44,24 @@ inline uint32_t cnCANDevMask(uint32_t mask, uint8_t devID)
 // IDs of a outgoing (master -> device) CAN message. See CANnuccia specs.
 // `cnCANDevMask()` a device id into these before use. Note that the lowest 12
 // bits are unset.
-#define CN_CAN_MSG_PROG_REQ    0xCA001000u
-#define CN_CAN_MSG_PROG_DONE   0xCA002000u
-#define CN_CAN_MSG_UNLOCK      0xCA003000u
-#define CN_CAN_MSG_ERASE_PAGES 0xCA004000u
-#define CN_CAN_MSG_SEEK        0xCA005000u
-#define CN_CAN_MSG_WRITE       0xCA006000u
-#define CN_CAN_MSG_CHECK_PAGE  0xCA007000u
+#define CN_CAN_MSG_PROG_REQ      0xCA001000u
+#define CN_CAN_MSG_PROG_DONE     0xCA002000u
+#define CN_CAN_MSG_UNLOCK        0xCA003000u
+#define CN_CAN_MSG_SELECT_PAGE   0xCA004000u
+#define CN_CAN_MSG_SEEK          0xCA005000u
+#define CN_CAN_MSG_WRITE         0xCA006000u
+#define CN_CAN_MSG_CHECK_WRITES  0xCA007000u
+#define CN_CAN_MSG_COMMIT_WRITES 0xCA008000u
 
 // IDs of an ingoing (device -> master) CAN message. See CANnuccia specs.
 // `cnCANDevMask()` a device id into these before use. Note that the lowest 12
 // bits are unset.
-#define CN_CAN_MSG_PROG_REQ_RESP   0xCB001000u
-#define CN_CAN_MSG_PROG_DONE_ACK   0xCB002000u
-#define CN_CAN_MSG_UNLOCK_ACK      0xCB003000u
-#define CN_CAN_MSG_TELL            0xCB005000u
-#define CN_CAN_MSG_CHECK_PAGE_RESP 0xCB007000u
+#define CN_CAN_MSG_PROG_REQ_RESP    0xCB001000u
+#define CN_CAN_MSG_PROG_DONE_ACK    0xCB002000u
+#define CN_CAN_MSG_UNLOCKED         0xCB003000u
+#define CN_CAN_MSG_PAGE_SELECTED    0xCB004000u
+#define CN_CAN_MSG_WRITES_CHECKED   0xCB007000u
+#define CN_CAN_MSG_WRITES_COMMITTED 0xCB008000u
 
 
 #endif // CAN_MSGS_H

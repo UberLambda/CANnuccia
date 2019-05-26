@@ -10,6 +10,9 @@
 
 #include <stdint.h>
 
+/// The target CAN bit rate rate.
+extern const unsigned CN_CAN_RATE;
+
 /// Initializes the CAN bus.
 /// `id` and `mask` will be used to setup an ingoing message filter; CAN
 /// messages will be read only if `messageId & mask == id & mask`.

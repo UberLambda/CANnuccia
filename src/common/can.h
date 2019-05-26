@@ -19,6 +19,9 @@ extern const unsigned CN_CAN_RATE;
 /// The highest 29 bits of `mask` mask the CAN id; the lowest 3 bits
 /// mask IDE, RTR and TXRQ.
 /// Returns true on success or false on error.
+///
+/// A repeated call to `cnCANInit()` just changes the filter's (id, mask) pair,
+/// without having to reinitialize the bus.
 int cnCANInit(uint32_t id, uint32_t mask);
 
 /// Sends a CAN message.

@@ -83,20 +83,32 @@ struct Can
 const unsigned CN_CAN_RATE = 100000; // (100kbps, matches BTR's value)
 
 
-/// Sets the CAN1 filter number `n` to the given 32-bit id & mask pair.
+/// Sets/changes CAN1 filter number `n` to the given 32-bit id & mask pair.
 inline static void initCANFilter(unsigned n, uint32_t id, uint32_t mask)
 {
     const uint32_t fltBit = (1u << n);
-    CAN1->FM1R &= ~fltBit; // CAN1: filter n in mask mode
-    CAN1->FS1R |= fltBit; // CAN1: filter n is 32-bit (not 16-bit)
-    CAN1->FFA1R &= ~fltBit; // CAN1: filter n assigned to FIFO 0
+    CAN1->FA1R &= ~fltBit; // CAN1 filter n is not active
+    CAN1->FM1R &= ~fltBit; // CAN1 filter n in mask mode
+    CAN1->FS1R |= fltBit; // CAN1 filter n is 32-bit (not 16-bit)
+    CAN1->FFA1R &= ~fltBit; // CAN1 filter n assigned to FIFO 0
     CAN1->FILTER[n].R1 = id;
     CAN1->FILTER[n].R2 = mask;
-    CAN1->FA1R |= fltBit; // CAN1: filter 0 is active
+    CAN1->FA1R |= fltBit; // CAN1 filter n is active
 }
+
+/// Set to true after the first time `cnCANInit()` is called.
+static int busInited = 0;
 
 int cnCANInit(uint32_t id, uint32_t mask)
 {
+    if(busInited)
+    {
+        // CAN already inited; just disable, edit and re-enable filter 0
+        initCANFilter(0, id, mask);
+        return 1;
+    }
+    // Else: need to init CAN from scratch
+
     // TODO: Macro to set whether to remap CAN1 to port B or leave it on port A
     //       The code below makes CAN1 be mapped to port B
     RCC_APB2ENR |= RCC_APB2ENR_IOPBEN | RCC_APB2ENR_AFIOEN; // Enable clock source for GPIO port B and AFIO
@@ -127,6 +139,7 @@ int cnCANInit(uint32_t id, uint32_t mask)
     while(CAN1->MSR & CAN_MSR_INAK) { } // Wait for CAN1 to exiting init mode
     CAN1->MCR &= ~CAN_MCR_SLEEP; // Wake CAN1 from sleep. It should now sync...
 
+    busInited = 1;
     return 1;
 }
 

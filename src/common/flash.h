@@ -14,6 +14,10 @@
 #   error "CN_FLASH_PAGE_SIZE must be defined by the build system"
 #endif
 
+#ifndef CN_FLASH_PAGE_MASK
+#   error "CN_FLASH_PAGE_MASK must be defined by the build system"
+#endif
+
 #ifndef CN_FLASH_BOOTLOADER_SIZE
 #   error "CN_FLASH_BOOTLOADER_SIZE must be defined by the build system"
 #endif

@@ -43,7 +43,8 @@ string(REPLACE ";" " " CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS_LIST}")
 # FIXME: High-density (> 128kB) devices have 2kB pages, not 1kB
 # FIXME: This should likely be moved out of the toolchain file to somewhere better!
 add_definitions(
-    -DCN_FLASH_PAGE_SIZE=0x400 # 1kB pages
-    -DCN_FLASH_BOOTLOADER_SIZE=0x2000 # 4kB reserved to CANnuccia
+    -DCN_FLASH_PAGE_SIZE=0x400u # 1kB pages
+    -DCN_FLASH_PAGE_MASK=0xFFFFFC00u
+    -DCN_FLASH_BOOTLOADER_SIZE=0x2000u # 4kB reserved to CANnuccia
     -DCN_PLATFORM_STM32=1
 )

@@ -35,8 +35,14 @@ struct Flash
 #define FLASH_SR_BSY 0x00000001u
 
 
-const unsigned CN_FLASH_PAGE_SIZE = 1024; // 1kB pages on STM32 medium-density
+extern char _flash_start, _flash_end; // (defined in the linker script)
 
+int cnFlashPageWriteable(uintptr_t addr)
+{
+    uintptr_t minAddr = (uintptr_t)(&_flash_start) + CN_FLASH_BOOTLOADER_SIZE;
+    uintptr_t maxAddr = (uintptr_t)(&_flash_end);
+    return addr >= minAddr && (addr + CN_FLASH_PAGE_SIZE) < maxAddr;
+}
 
 int cnFlashUnlock(void)
 {

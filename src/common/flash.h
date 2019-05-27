@@ -10,6 +10,15 @@
 
 #include <stdint.h>
 
+#ifndef CN_FLASH_PAGE_SIZE
+#   error "CN_FLASH_PAGE_SIZE must be defined by the build system"
+#endif
+
+#ifndef CN_FLASH_BOOTLOADER_SIZE
+#   error "CN_FLASH_BOOTLOADER_SIZE must be defined by the build system"
+#endif
+
+
 /// Unlocks flash memory for writing.
 /// Returns true on success or false on error.
 int cnFlashUnlock(void);
@@ -18,8 +27,10 @@ int cnFlashUnlock(void);
 /// Returns true on success or false on error.
 int cnFlashLock(void);
 
-/// The size in bytes of a single page of flash memory.
-extern const unsigned CN_FLASH_PAGE_SIZE;
+/// Returns true if the page in flash that starts at `addr` (the address of
+/// its first byte) is writeable, false if it should not be written to (it is
+/// part of the bootloader, out-of-bounds, ...)
+int cnFlashPageWriteable(uintptr_t addr);
 
 /// Begins a write/erase cycle for the page starting at `addr` in flash, preparing
 /// data to be filled in with `cnFlashFill()`.

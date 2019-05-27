@@ -36,9 +36,13 @@
 /* The ISR run when the chip is reset. */
 ENTRY(resetHandler);
 
+_flash_size = 64K;
+_flash_start = 0x08000000;
+_flash_end = _flash_start + _flash_size;
+
 MEMORY
 {
-    FLASH(rx) : ORIGIN = 0x08000000, LENGTH = 64K
+    FLASH(rx) : ORIGIN = _flash_start, LENGTH = _flash_size
     RAM(rwx) : ORIGIN = 0x20000000, LENGTH = 20K
 }
 

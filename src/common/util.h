@@ -11,7 +11,7 @@
 #include <stdint.h>
 
 /// Reads a little-endian U32 from 4 bytes.
-inline uint32_t readU32LE(const uint8_t bytes[4])
+inline uint32_t cnReadU32LE(const uint8_t bytes[4])
 {
     return bytes[0]
             | ((uint32_t)bytes[1] << 8)
@@ -20,7 +20,7 @@ inline uint32_t readU32LE(const uint8_t bytes[4])
 }
 
 /// Converts a little-endian U32 to 4 bytes.
-inline void writeU32LE(uint8_t outBytes[4], uint32_t u32)
+inline void cnWriteU32LE(uint8_t outBytes[4], uint32_t u32)
 {
     outBytes[0] = (u32 & 0x000000FFu);
     outBytes[1] = (u32 & 0x0000FF00u) >> 8;

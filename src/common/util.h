@@ -11,21 +11,21 @@
 #include <stdint.h>
 
 /// Reads a little-endian U16 from 2 bytes.
-inline uint16_t cnReadU16LE(const uint8_t bytes[static 2])
+inline static uint16_t cnReadU16LE(const uint8_t bytes[static 2])
 {
     return bytes[0]
             | (uint16_t)(bytes[1] << 8);
 }
 
 /// Converts a little-endian U16 to 2 bytes.
-inline void cnWriteU16LE(uint8_t outBytes[static 2], uint16_t u16)
+inline static void cnWriteU16LE(uint8_t outBytes[static 2], uint16_t u16)
 {
     outBytes[0] = (u16 & 0x00FFu);
     outBytes[1] = (u16 & 0xFF00u) >> 8;
 }
 
 /// Reads a little-endian U32 from 4 bytes.
-inline uint32_t cnReadU32LE(const uint8_t bytes[static 4])
+inline static uint32_t cnReadU32LE(const uint8_t bytes[static 4])
 {
     return bytes[0]
             | (uint32_t)(bytes[1] << 8)
@@ -34,7 +34,7 @@ inline uint32_t cnReadU32LE(const uint8_t bytes[static 4])
 }
 
 /// Converts a little-endian U32 to 4 bytes.
-inline void cnWriteU32LE(uint8_t outBytes[static 4], uint32_t u32)
+inline static void cnWriteU32LE(uint8_t outBytes[static 4], uint32_t u32)
 {
     outBytes[0] = (u32 & 0x000000FFu);
     outBytes[1] = (u32 & 0x0000FF00u) >> 8;

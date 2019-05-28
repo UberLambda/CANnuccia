@@ -112,6 +112,8 @@ CN_NORETURN void resetHandler(void)
 /// 0x20005000: RAM bottom (0x20000000) + RAM size (0x5000, i.e. 20KB)
 #define STACK_START_ADDR 0x20005000
 
+extern void tim2Handler(void); // from "stm32/timer.c"
+
 /// ARM Cortex-M3 Interrupt vector table.
 typedef void(*ISR)(void);
 ISR isrs[] CN_SECTION(".isrs") =
@@ -164,7 +166,7 @@ ISR isrs[] CN_SECTION(".isrs") =
     hcf,                  // TIM1_UP       
     hcf,                  // TIM1_TRG_COM  
     hcf,                  // TIM1_CC       
-    hcf,                  // TIM2          
+    tim2Handler,          // TIM2
     hcf,                  // TIM3          
     hcf,                  // TIM4          
     hcf,                  // I2C1_EV       

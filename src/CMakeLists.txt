@@ -14,6 +14,7 @@ add_library(cnSTM32 STATIC
     stm32/can.c
     stm32/debug.c
     stm32/util.c
+    stm32/timer.c
 )
 
 add_executable(cn

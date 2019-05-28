@@ -39,8 +39,10 @@ struct Tim
 #define TIM_CR1_ARPE 0x00000080u
 #define TIM_CR1_DIR 0x00000010u
 #define TIM_CR1_OPM 0x00000008u
+#define TIM_CR1_URS 0x00000004u
 #define TIM_CR1_CEN 0x00000001u
 #define TIM_DIER_UIE 0x00000001u
+#define TIM_EGR_UG 0x00000001u
 
 #define RCC_APB1ENR (*(volatile uint32_t *)0x4002101C)
 #define RCC_APB1ENR_TIM2ENR 0x00000001u
@@ -49,6 +51,7 @@ struct Tim
 #define TIM2_IRQN 28
 #define NVIC_ISER0 (*(volatile uint32_t *)0xE000E100)
 #define NVIC_ICER0 (*(volatile uint32_t *)0xE000E180)
+#define NVIC_ICPR0 (*(volatile uint32_t *)0xE000E280)
 
 #define CLOCK_FREQ_MHZ 72
 
@@ -59,8 +62,8 @@ static CNtimeoutFunc timeoutFunc = NULL;
 /// The ISR registered in startup.c's vector table.
 void tim2Handler(void)
 {
-    timeoutFunc();
     TIM2->SR &= ~TIM_SR_UIF; // Clear UIF or the code will get stuck in this ISR!
+    timeoutFunc();
 }
 
 int cnTimerStart(uint32_t delayUs, int oneshot, CNtimeoutFunc onTimeout)
@@ -73,7 +76,8 @@ int cnTimerStart(uint32_t delayUs, int oneshot, CNtimeoutFunc onTimeout)
 
     RCC_APB1ENR |= RCC_APB1ENR_TIM2ENR; // Enable TIM2's clock
     TIM2->CR1 &= ~TIM_CR1_CEN; // Ensure TIM2's counter is stopped
-    TIM2->CR1 |= TIM_CR1_DIR;
+    TIM2->CR1 |= TIM_CR1_DIR; // TIM2 counts down
+    TIM2->CR1 |= TIM_CR1_URS; // TIM2 updates trigger only on overflow or underflow
 
     // Set TIM2's counter reload value and prescaler;
     //
@@ -104,10 +108,14 @@ int cnTimerStart(uint32_t delayUs, int oneshot, CNtimeoutFunc onTimeout)
     }
     TIM2->PSC = psc & 0xFFFF;
     TIM2->ARR = arr & 0xFFFF;
+    TIM2->EGR |= TIM_EGR_UG; // Update Generation, applies the new ARR.
+                             // IMPORTANT or the interrupt will spuriously trigger
+                             // as soon as the timer is enabled!
 
     timeoutFunc = onTimeout; // Set the function the `tim2Handler()` ISR will call
     TIM2->CR1 |= oneshot ? TIM_CR1_OPM : 0; // Set oneshot or repeating
     TIM2->DIER |= TIM_DIER_UIE; // Make TIM2 trigger update interrupts
+    NVIC_ICPR0 |= (1 << TIM2_IRQN); // Clear any pending TIM2 interrupt
     NVIC_ISER0 |= (1 << TIM2_IRQN); // Enable the TIM2 interrupt vector
 
     TIM2->CR1 |= TIM_CR1_CEN; // Start TIM2's counter

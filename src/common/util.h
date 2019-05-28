@@ -28,4 +28,13 @@ inline void cnWriteU32LE(uint8_t outBytes[4], uint32_t u32)
     outBytes[3] = (u32 & 0xFF000000u) >> 24;
 }
 
+/// The initialization value used by `cnCRC16()` (CRC16/XMODEM).
+#define CN_CRC16_INITVAL 0x0000
+
+/// The polynomial used by `cnCRC16()` (CRC16/XMODEM).
+#define CN_CRC16_POLYNOMIAL 0x1021
+
+/// Calculates the CRC16/XMODEM of a byte buffer.
+uint16_t cnCRC16(unsigned len, const uint8_t data[len]);
+
 #endif // UTIL_H

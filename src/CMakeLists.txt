@@ -13,6 +13,7 @@ add_library(cnSTM32 STATIC
     stm32/flash.c
     stm32/can.c
     stm32/debug.c
+    stm32/util.c
 )
 
 add_executable(cn

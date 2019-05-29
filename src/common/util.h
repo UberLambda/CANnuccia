@@ -42,6 +42,29 @@ inline static void cnWriteU32LE(uint8_t outBytes[static 4], uint32_t u32)
     outBytes[3] = (u32 & 0xFF000000u) >> 24;
 }
 
+/// Calculates the integer log2 of an integer.
+/// Returns a negative value on error.
+inline static int cnLog2I(unsigned n)
+{
+    if(n == 0)
+    {
+        return -1;
+    }
+
+#if defined(__clang__) || defined(__GNUC__)
+    // ctz: number of trailing zeroes in a binary number
+    return __builtin_ctz(n);
+#else
+    int lg2 = -1;
+    while(n)
+    {
+        n >>= 1;
+        lg2 ++;
+    }
+    return lg2;
+#endif
+}
+
 /// The initialization value used by `cnCRC16()` (CRC16/XMODEM).
 #define CN_CRC16_INITVAL 0x0000
 

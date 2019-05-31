@@ -23,6 +23,10 @@
 #endif
 
 
+/// Returns the total size of flash memory, in bytes.
+/// Divide by `CN_FLASH_PAGE_SIZE` to get the total number of pages.
+uintptr_t cnFlashSize(void);
+
 /// Unlocks flash memory for writing.
 /// Returns true on success or false on error.
 int cnFlashUnlock(void);

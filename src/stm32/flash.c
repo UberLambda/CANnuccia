@@ -37,6 +37,12 @@ struct Flash
 
 extern char _flash_start, _flash_end; // (defined in the linker script)
 
+uintptr_t cnFlashSize(void)
+{
+    // NOTE: Could also query the flash size register
+    return (uintptr_t)(&_flash_end - &_flash_start);
+}
+
 int cnFlashPageWriteable(uintptr_t addr)
 {
     uintptr_t minAddr = (uintptr_t)(&_flash_start) + CN_FLASH_BOOTLOADER_SIZE;

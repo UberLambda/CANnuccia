@@ -46,5 +46,5 @@ add_definitions(
     -DCN_FLASH_PAGE_SIZE=0x400u # 1kB pages
     -DCN_FLASH_PAGE_MASK=0xFFFFFC00u
     -DCN_FLASH_BOOTLOADER_SIZE=0x2000u # 4kB reserved to CANnuccia
-    -DCN_PLATFORM_STM32=1
+    -DCN_PLATFORM_IS_STM32=1
 )

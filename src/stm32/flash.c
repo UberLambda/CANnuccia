@@ -34,8 +34,10 @@ struct Flash
 #define FLASH_CR_PG 0x00000001u
 #define FLASH_SR_BSY 0x00000001u
 
+#define SCB_VTOR (*(volatile uint32_t *)0xE000ED08)
 
 extern char _flash_start, _flash_end; // (defined in the linker script)
+
 
 uintptr_t cnFlashSize(void)
 {
@@ -144,7 +146,37 @@ int cnFlashEndWrite(void)
     return 1;
 }
 
-void cnJumpToProgram(void)
+
+typedef void(*ResetHandler)(void);
+
+__attribute__((noreturn)) void cnJumpToProgram(void)
 {
-    // FIXME: Implement!
+    // FIXME IMPLEMENT: The code should undo all modifications done to system
+    //                  registers before jumping to the user program. In particular:
+    //                  - Disable GPIO ports (debug LED + bxCAN), AFIO, TIM2, other devices
+    //                  - Disable all enabled interrupts (TIM2, bxCAN...)
+    //                  - Reset the internal oscillator as clock source (no PLL)
+
+    // The vector table of the user program is right after the bootloader's end.
+    uintptr_t vtAddr = ((uintptr_t)&_flash_start) + CN_FLASH_BOOTLOADER_SIZE;
+    volatile uint32_t *vt = (volatile uint32_t *)vtAddr;
+
+    ResetHandler userReset = (ResetHandler)vt[1];
+
+    // The stack pointer to use for the user program is the first entry of the
+    // vector table.
+    __asm__ __volatile__("MSR msp, %0"
+                         : // (no outputs)
+                         : "r"(vt[0])
+                         :);
+
+    // Switch to the user program's vector table.
+    // -> http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.dai0321a/BIHHDGBC.html
+    SCB_VTOR = vtAddr;
+    __asm__ __volatile__("DSB");
+
+    // So long, and thanks for all the fish!
+    userReset();
+
+    __builtin_trap(); // (should never reach here)
 }

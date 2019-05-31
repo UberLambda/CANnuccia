@@ -7,40 +7,56 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include <stddef.h>
-#include "common/debug.h"
+#include "common/util.h"
 #include "common/can.h"
 #include "common/can_msgs.h"
 #include "common/flash.h"
-#include "common/util.h"
+#include "common/timer.h"
+#include "common/debug.h"
 
-/// Set to false when the bootloader is to exit its main loop
-volatile static int running = 0;
+/// The current state of the bootloader.
+volatile static enum
+{
+    IDLE, ///< Timeout engaged, waiting for a PROG_REQ.
+    LOCKED, ///< Got a PROG_REQ, waiting for an UNLOCK.
+    UNLOCKED, ///< Flash unlocked, can COMMIT_WRITES to it.
+    DONE, ///< Bootloader done, message pump is to quit.
 
-/// Set to true when the flash is unlocked for writing
-volatile static int unlocked = 0;
+} state = IDLE;
 
-/// Points to the first byte in flash of the selected page
-volatile static uintptr_t selPageAddr = 0;
+/// Data about the currently-selected page.
+static struct Page
+{
+    volatile uintptr_t addr; ///< Points to the first byte in flash of the page.
+    volatile uintptr_t writeOffset; /// WRITE head byte offset into the selected page
+    uint8_t writes[CN_FLASH_PAGE_SIZE]; /// WRITE head byte offset into the selected page
 
-/// WRITE head byte offset into the selected page
-volatile static uintptr_t selWriteOffset = 0;
+} selPage = {0};
 
-/// Page-sized buffer where WRITEs for the selected page are stored
-static uint8_t selPageWrites[CN_FLASH_PAGE_SIZE];
+/// The timeout in microseconds after which to the bootloader stops listening
+/// for CAN messages
+#define BOOTLOADER_TIMEOUT_US 3000000
+
+
+/// Executed when the bootloader times out, exits the CAN message pump.
+static void onTimeout(void)
+{
+    state = DONE;
+}
 
 int main(void)
 {
+    cnDebugInit();
+    cnDebugLed(1);
+
     // Only listen to CAN messages from master to this device
     uint8_t devId = 0xFE; // FIXME READ REAL ADDRESS FROM OPTION BYTES/EEPROM
     uint32_t txFilterId = cnCANDevMask(CN_CAN_TX_FILTER_ID, devId);
     cnCANInit(txFilterId, CN_CAN_TX_FILTER_MASK);
 
-    cnDebugInit();
-    cnDebugLed(1);
-
-    // FIXME IMPLEMENT: Set a timer interrupt to ~3 seconds from now; if no
-    //                  PROG_REQ has arrived by then stop listening to CAN and
-    //                  jump to the user program
+    // Set the bootloader timeout: if no PROG_REQ has arrived by that time, stop
+    // the CAN message pump and jump to the user program.
+    cnTimerStart(BOOTLOADER_TIMEOUT_US, 1, onTimeout);
 
     // CAN message pump (main loop)
     // See the CANnuccia specs for what each message is supposed to do
@@ -49,8 +65,8 @@ int main(void)
     int inMsgDataLen;
     uint16_t selPageWritesCRC = 0; // CRC of the WRITEs in `selPageWrites`
 
-    running = 1;
-    while(running)
+    state = IDLE;
+    while(state != DONE)
     {
         inMsgDataLen = cnCANRecv(&inMsgId, sizeof(inMsgData), inMsgData);
         if(inMsgDataLen < 0)
@@ -62,17 +78,30 @@ int main(void)
         switch(inMsgId & CN_CAN_MSGID_MASK)
         {
         case CN_CAN_MSG_PROG_REQ:
-            // FIXME IMPLEMENT: Master has asked to program us; stop the 3-second
-            //                  timeout timer and ACK the request - sending data
-            //                  about us
+            if(state == IDLE)
+            {
+                cnTimerStop();
+                state = LOCKED;
+            }
+            // Always answer with stats after a PROG_REQ (even if we already were not IDLE):
+            // 1. log2(size of a flash page): U8
+            // 2. Total number of flash pages: U16
+            outMsgId = cnCANDevMask(CN_CAN_MSG_PROG_REQ_RESP, devId);
+            outMsgData[0] = (uint8_t)cnLog2I(CN_FLASH_PAGE_SIZE);
+            cnWriteU16LE(outMsgData, (uint16_t)(cnFlashSize() / CN_FLASH_PAGE_SIZE));
+            cnCANSend(outMsgId, 3, outMsgData);
             break;
 
         case CN_CAN_MSG_UNLOCK:
-            unlocked = cnFlashUnlock();
-            if(unlocked)
+            if(state == IDLE)
             {
-                outMsgId = cnCANDevMask(CN_CAN_MSG_UNLOCKED, devId);
-                cnCANSend(outMsgId, 0, NULL);
+                int unlocked = cnFlashUnlock();
+                if(unlocked)
+                {
+                    state = UNLOCKED;
+                    outMsgId = cnCANDevMask(CN_CAN_MSG_UNLOCKED, devId);
+                    cnCANSend(outMsgId, 0, NULL);
+                }
             }
             break;
 
@@ -87,10 +116,10 @@ int main(void)
 
                 if(cnFlashPageWriteable(newPageAddr))
                 {
-                    selPageAddr = newPageAddr;
+                    selPage.addr = newPageAddr;
 
                     outMsgId = cnCANDevMask(CN_CAN_MSG_PAGE_SELECTED, devId);
-                    cnWriteU32LE(outMsgData, selPageAddr); // (send the PAGE_MASKed-out address)
+                    cnWriteU32LE(outMsgData, selPage.addr); // (send the PAGE_MASKed-out address)
                     cnCANSend(outMsgId, 4, outMsgData);
                 }
             }
@@ -100,25 +129,25 @@ int main(void)
             if(inMsgDataLen == 4)
             {
                 uint32_t newOffset = cnReadU32LE(inMsgData);
-                if(newOffset < sizeof(selPageWrites))
+                if(newOffset < sizeof(selPage.writes))
                 {
-                    selWriteOffset = newOffset;
+                    selPage.writeOffset = newOffset;
                 }
             }
             break;
 
         case CN_CAN_MSG_WRITE:
             for(int i = 0;
-                i < inMsgDataLen && selWriteOffset < sizeof(selPageWrites);
+                i < inMsgDataLen && selPage.writeOffset < sizeof(selPage.writes);
                 i ++)
             {
-                selPageWrites[selWriteOffset] = inMsgData[i];
-                selWriteOffset ++;
+                selPage.writes[selPage.writeOffset] = inMsgData[i];
+                selPage.writeOffset ++;
             }
             break;
 
         case CN_CAN_MSG_CHECK_WRITES:
-            selPageWritesCRC = cnCRC16(sizeof(selPageWrites), selPageWrites);
+            selPageWritesCRC = cnCRC16(sizeof(selPage.writes), selPage.writes);
 
             outMsgId = cnCANDevMask(CN_CAN_MSG_WRITES_CHECKED, devId);
             cnWriteU16LE(outMsgData, selPageWritesCRC);
@@ -126,24 +155,22 @@ int main(void)
             break;
 
         case CN_CAN_MSG_COMMIT_WRITES:
-            if(!unlocked)
+            if(state == UNLOCKED)
             {
-                // Can't commit writes if the flash is still locked
-                continue;
-            }
-            cnFlashBeginWrite(selPageAddr);
-            cnFlashFill(0, sizeof(selPageWrites), selPageWrites);
-            cnFlashEndWrite();
+                cnFlashBeginWrite(selPage.addr);
+                cnFlashFill(0, sizeof(selPage.writes), selPage.writes);
+                cnFlashEndWrite();
 
-            outMsgId = cnCANDevMask(CN_CAN_MSG_WRITES_COMMITTED, devId);
-            cnWriteU32LE(outMsgData, selPageAddr);
-            cnCANSend(outMsgId, 4, outMsgData);
+                outMsgId = cnCANDevMask(CN_CAN_MSG_WRITES_COMMITTED, devId);
+                cnWriteU32LE(outMsgData, selPage.addr);
+                cnCANSend(outMsgId, 4, outMsgData);
+            }
             break;
 
         case CN_CAN_MSG_PROG_DONE:
             outMsgId = cnCANDevMask(CN_CAN_MSG_PROG_DONE_ACK, devId);
             cnCANSend(outMsgId, 0, NULL);
-            running = 0;
+            state = DONE;
             break;
         }
     }

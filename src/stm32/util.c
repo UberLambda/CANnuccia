@@ -1,4 +1,4 @@
-// CANnuccia/src/common/util.c - HW-agnostic implementation of common/util.h
+// CANnuccia/src/stm32/util.c - STM32 implementation of common/util.h
 //
 // Copyright (c) 2019, Paolo Jovon <paolo.jovon@gmail.com>
 //

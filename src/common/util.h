@@ -28,9 +28,9 @@ inline static void cnWriteU16LE(uint8_t outBytes[static 2], uint16_t u16)
 inline static uint32_t cnReadU32LE(const uint8_t bytes[static 4])
 {
     return bytes[0]
-            | (uint32_t)(bytes[1] << 8)
-            | (uint32_t)(bytes[2] << 16)
-            | (uint32_t)(bytes[3] << 24);
+            | (uint32_t)bytes[1] << 8
+            | (uint32_t)bytes[2] << 16
+            | (uint32_t)bytes[3] << 24;
 }
 
 /// Converts a little-endian U32 to 4 bytes.

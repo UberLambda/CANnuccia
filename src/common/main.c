@@ -157,9 +157,15 @@ int main(void)
         case CN_CAN_MSG_COMMIT_WRITES:
             if(state == UNLOCKED)
             {
-                cnFlashBeginWrite(selPage.addr);
+                if(!cnFlashBeginWrite(selPage.addr))
+                {
+                    break;
+                }
                 cnFlashFill(0, sizeof(selPage.writes), selPage.writes);
-                cnFlashEndWrite();
+                if(!cnFlashEndWrite())
+                {
+                    break;
+                }
 
                 outMsgId = cnCANDevMask(CN_CAN_MSG_WRITES_COMMITTED, devId);
                 cnWriteU32LE(outMsgData, selPage.addr);

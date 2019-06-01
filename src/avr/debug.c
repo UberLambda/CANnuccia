@@ -7,13 +7,27 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #include "common/debug.h"
 
+#include <avr/io.h>
+
+// Onboard LED is on PB5
+#define LED_PORT_DIR DDRB
+#define LED_PORT PORTB
+#define LED_PIN_MASK 0x20
+
 int cnDebugInit(void)
 {
-    // FIXME IMPLEMENT!
-    return 0;
+    LED_PORT_DIR |= LED_PIN_MASK;
+    return 1;
 }
 
 void cnDebugLed(int on)
 {
-    // FIXME IMPLEMENT!
+    if(on)
+    {
+        LED_PORT |= LED_PIN_MASK;
+    }
+    else
+    {
+        LED_PORT &= ~LED_PIN_MASK;
+    }
 }

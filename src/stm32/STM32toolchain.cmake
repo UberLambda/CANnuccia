@@ -11,7 +11,7 @@ set(ARM_PREFIX "arm-none-eabi" CACHE STRING "The prefix of the ARM crosscompiler
 set(STM32_PART "stm32f103c8" CACHE STRING "The STM32 chip's part name")
 
 set(CMAKE_SYSTEM_NAME Generic)
-set(CMAKE_SYSTEM_PROCESSOR ARM)
+set(CMAKE_SYSTEM_PROCESSOR arm-stm32)
 
 set(CMAKE_C_COMPILER "${ARM_PREFIX}-gcc")
 set(CMAKE_C_COMPILER_TARGET "${ARM_PREFIX}")

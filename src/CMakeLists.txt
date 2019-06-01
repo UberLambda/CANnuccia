@@ -8,14 +8,17 @@
 
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
 
-add_library(cnSTM32 STATIC
-    stm32/startup.c
-    stm32/flash.c
-    stm32/can.c
-    stm32/debug.c
-    stm32/util.c
-    stm32/timer.c
-)
+# NOTE: Use one of the provided toolchain files, they will define
+#       `CMAKE_SYSTEM_PROCESSOR` and add #defines for core CN_* macros!
+if(CMAKE_SYSTEM_PROCESSOR MATCHES ".*stm32")
+    set(CN_TARGET stm32)
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES ".*avr")
+    set(CN_TARGET avr)
+else()
+    message(FATAL_ERROR "Unknown target. Specify a CANnuccia toolchain file for CMake!")
+endif()
+
+add_subdirectory(${CN_TARGET}/)
 
 add_executable(cn
     common/main.c
@@ -26,5 +29,5 @@ set_target_properties(cn PROPERTIES
     SUFFIX ".elf"
 )
 target_link_libraries(cn PUBLIC
-    cnSTM32
+    cn_${CN_TARGET}
 )

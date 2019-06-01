@@ -28,8 +28,8 @@ volatile static enum
 static struct Page
 {
     volatile uintptr_t addr; ///< Points to the first byte in flash of the page.
-    volatile uintptr_t writeOffset; /// WRITE head byte offset into the selected page
-    uint8_t writes[CN_FLASH_PAGE_SIZE]; /// WRITE head byte offset into the selected page
+    volatile uintptr_t writeOffset; ///< WRITE head byte offset into the selected page.
+    uint8_t writes[CN_FLASH_PAGE_SIZE]; ///< All WRITEs to be committed to the selected page.
 
 } selPage = {0};
 

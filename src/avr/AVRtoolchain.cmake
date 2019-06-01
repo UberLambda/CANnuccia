@@ -9,6 +9,11 @@
 set(AVR_PREFIX "avr" CACHE STRING "The prefix of the AVR crosscompiler toolchain")
 set(AVR_PART "atmega328p" CACHE STRING "The AVR microcontroller's part name")
 
+# 4kB bootloader is the maximum possible for ATMega328p (BOOTSZ=00).
+# With BOOTSZ=00, the whole NRWW section is occupied by the bootloader.
+# TODO: May differ for other AVR chips!
+set(AVR_BOOTLOADER_SIZE 4096 CACHE STRING "The size allocated to the bootloader section (via BOOTSZ)")
+
 set(CMAKE_SYSTEM_NAME Generic)
 set(CMAKE_SYSTEM_PROCESSOR avr)
 
@@ -26,6 +31,11 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
 set(CMAKE_C_FLAGS_RELEASE "-Os -mmcu=${AVR_PART} -fstrict-volatile-bitfields")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}")
 
+set(CMAKE_EXE_LINKER_FLAGS_LIST
+    -Wl,--section-start=.text=${AVR_BOOTLOADER_SIZE} # Relocate bootloader code
+)
+string(REPLACE ";" " " CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS_LIST}")
+
 # #define core macros required to build CANnuccia
 # FIXME: Do all AVRs have 128B pages?
 # FIXME IMPORTANT: Make sure the bootloader actually fits in CN_FLASH_BOOTLOADER_SIZE!!
@@ -33,6 +43,6 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}")
 add_definitions(
     -DCN_FLASH_PAGE_SIZE=0x80u # 128B pages
     -DCN_FLASH_PAGE_MASK=0xFF80u
-    -DCN_FLASH_BOOTLOADER_SIZE=0x1000u # 4kB reserved to CANnuccia
+    -DCN_FLASH_BOOTLOADER_SIZE=${AVR_BOOTLOADER_SIZE}u # ${AVR_BOOTLOADER_SIZE} reserved to CANnuccia
     -DCN_PLATFORM_IS_AVR=1
 )

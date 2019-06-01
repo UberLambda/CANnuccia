@@ -7,5 +7,9 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 add_library(cn_avr STATIC
+    flash.c
+    can.c
     debug.c
+    util.c
+    timer.c
 )

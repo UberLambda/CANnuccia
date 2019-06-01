@@ -23,7 +23,7 @@ add_executable(cn
 set_target_properties(cn PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
     OUTPUT_NAME "cn"
-    SUFFIX ".bin"
+    SUFFIX ".elf"
 )
 target_link_libraries(cn PUBLIC
     cnSTM32

@@ -7,27 +7,19 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #include "common/debug.h"
 
-#include <avr/io.h>
+#include "common/cc.h"
 
-// Onboard LED is on PB5
-#define LED_PORT_DIR DDRB
-#define LED_PORT PORTB
-#define LED_PIN_MASK 0x20
+// No debug LED is present; the LED on PORTB5 is on the same pin as SPI's SCK,
+// so it can't be used as GPIO.
 
 int cnDebugInit(void)
 {
-    LED_PORT_DIR |= LED_PIN_MASK;
+    // Onboard LED not present.
     return 1;
 }
 
 void cnDebugLed(int on)
 {
-    if(on)
-    {
-        LED_PORT |= LED_PIN_MASK;
-    }
-    else
-    {
-        LED_PORT &= ~LED_PIN_MASK;
-    }
+    // Onboard LED not present.
+    CN_UNUSED(on);
 }

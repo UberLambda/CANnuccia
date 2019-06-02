@@ -14,4 +14,7 @@
 /// Makes a function/variable reside in section `sec`.
 #define CN_SECTION(sec) __attribute__((section(sec)))
 
+/// Makes a function argument as unused.
+#define CN_UNUSED(arg) ((void)arg)
+
 #endif // CC_H

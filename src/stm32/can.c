@@ -80,7 +80,7 @@ struct Can
 #define CAN_RFR_FMP 0x00000003u
 
 
-const unsigned CN_CAN_RATE = 100000; // (100kbps, matches BTR's value)
+const unsigned CN_CAN_RATE = 1000000; // (1Mbps, matches BTR's value)
 
 
 /// Sets/changes CAN1 filter number `n` to the given 32-bit id & mask pair.
@@ -133,7 +133,7 @@ int cnCANInit(uint32_t id, uint32_t mask)
     // enable loopback for debugging. Assumes a 72MHz clock & target CAN rate
     // matching `CN_CAN_RATE` as defined above.
     // -> http://www.bittiming.can-wiki.info/?CLK=72&ctype=bxCAN&SamplePoint=87.5&SJW=1&calc=1 <-
-    CAN1->BTR = 0x001C002Cu;
+    CAN1->BTR = 0x00050008u;
 
     CAN1->MCR &= ~CAN_MCR_INRQ; // Ask CAN1 to enter normal mode
     while(CAN1->MSR & CAN_MSR_INAK) { } // Wait for CAN1 to exiting init mode

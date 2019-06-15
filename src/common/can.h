@@ -10,6 +10,10 @@
 
 #include <stdint.h>
 
+/// Mask this into a CAN id to issue a Remote Transmission Request, or AND it
+/// with a received id to see if the message is a RTR.
+#define CN_CAN_RTR 0x00000002U
+
 /// The target CAN bit rate rate.
 extern const unsigned CN_CAN_RATE;
 

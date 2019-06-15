@@ -69,6 +69,15 @@ inline void spiDeselect(void)
 
 #define MCP_RXFSIDL_EXIDE 0x08
 
+#define MCP_BDLC_RTR 0x40
+
+#define MCP_STATUS_TX0REQ 0x04
+#define MCP_STATUS_TX1REQ 0x10
+#define MCP_STATUS_TX2REQ 0x40
+
+#define MCP_RXSTATUS_RXB0 0x40
+#define MCP_RXSTATUS_RXB1 0x80
+
 // Assume the AVR and the MCP run at the same clock speed.
 // CAN speed = 1Mbps, sample point = 75%
 // See: https://www.kvaser.com/support/calculators/bit-timing-calculator/
@@ -96,12 +105,12 @@ inline uint8_t mcpRead(uint8_t addr)
 }
 
 /// Reads `n` registers of the MCP CAN controller, starting from the one at `addr`.
-inline void mcpReadMulti(uint8_t addr, int n, uint8_t outValues[static n])
+inline void mcpReadMulti(uint8_t addr, unsigned n, uint8_t outValues[static n])
 {
     spiSelect();
     spiTransfer(MCP_CMD_READ);
     spiTransfer(addr);
-    for(int i = 0; i < n; i ++)
+    for(unsigned i = 0; i < n; i ++)
     {
         outValues[i] = spiTransfer(0x00);
     }
@@ -120,12 +129,12 @@ inline void mcpWrite(uint8_t addr, uint8_t value)
 
 /// Write to `n` registers in the MCP CAN controller, starting from the one at
 /// `addr`.
-inline void mcpWriteMulti(uint8_t addr, int n, const uint8_t values[static n])
+inline void mcpWriteMulti(uint8_t addr, unsigned n, const uint8_t values[static n])
 {
     spiSelect();
     spiTransfer(MCP_CMD_WRITE);
     spiTransfer(addr);
-    for(int i = 0; i < n; i ++)
+    for(unsigned i = 0; i < n; i ++)
     {
         spiTransfer(values[i]);
     }
@@ -143,42 +152,48 @@ inline void mcpModify(uint8_t addr, uint8_t mask, uint8_t value)
     spiDeselect();
 }
 
-/// Writes the CAN extended identifier in `id` (most significant 29 bits) to
-/// the group of four registers starting at `addr` in the MCP CAN controller.
-///
-/// The four registers starting from `addr` should be xSIDH, xSIDL, xEID8 and xEID0;
-/// see MCP's datasheet.
-inline void mcpWriteEID(uint32_t id, uint8_t addr)
+/// Writes the CAN extended identifier in `id` (most significant 29 bits) in the
+/// format of the four xSIDH, xSIDL, xEID8 and xEID0 in the MCP CAN controller.
+inline void mcpPutEID(uint32_t id, uint8_t outRegs[static 4])
 {
-    uint8_t regs[4];
-    regs[0] = (id & 0x00003FC0UL) >> 6; // ID bits 3..10 -> SIDH bits 0..7
-    regs[1] = MCP_RXFSIDL_EXIDE; // Set extended ID bit in SIDL
-    regs[1] |= (id & 0xC0000000UL) >> 30; // ID bits 27, 28 -> SIDL bits 0, 1
-    regs[1] |= (id & 0x00000038UL) << 2; // ID bits 0, 1, 2 -> SIDL bits 5, 6, 7
-    regs[2] = (id & 0x003FC000UL) >> 14; // ID bits 11..18 -> EID0 bits 0..7
-    regs[3] = (id & 0x3FC00000UL) >> 22; // ID bits 19..26 -> EID8 bits 0..7
-
-    mcpWriteMulti(addr, sizeof(regs), regs);
+    outRegs[0] = (id & 0x00003FC0UL) >> 6; // ID bits 3..10 -> SIDH bits 0..7
+    outRegs[1] = MCP_RXFSIDL_EXIDE; // Set extended ID bit in SIDL
+    outRegs[1] |= (id & 0xC0000000UL) >> 30; // ID bits 27, 28 -> SIDL bits 0, 1
+    outRegs[1] |= (id & 0x00000038UL) << 2; // ID bits 0, 1, 2 -> SIDL bits 5, 6, 7
+    outRegs[2] = (id & 0x003FC000UL) >> 14; // ID bits 11..18 -> EID0 bits 0..7
+    outRegs[3] = (id & 0x3FC00000UL) >> 22; // ID bits 19..26 -> EID8 bits 0..7
 }
 
 /// Reads a CAN extended identifier (setting the most significant 29 bits of the
-/// return value) from a group of four registers starting at `addr` in the MCP CAN controller.
-///
-/// The four registers starting from `addr` should be xSIDH, xSIDL, xEID8 and xEID0;
-/// see MCP's datasheet.
-inline uint32_t mcpReadEID(uint8_t addr)
+/// return value) that have been read to `regs` in the format of the MCP CAN
+/// controller: xSIDH, xSIDL, xEID8 and xEID0.
+inline uint32_t mcpGetEID(const uint8_t regs[static 4])
 {
-    uint8_t regs[4];
-    mcpReadMulti(addr, sizeof(regs), regs);
-
     uint32_t eid = 0;
     eid |= (uint32_t)(regs[0]) << 3; // SIDH bits 0..7 -> ID bits 3..10
     eid |= (uint32_t)(regs[1]) << 30; // SIDL BITS 0, 1 -> ID bits 27, 28
     eid |= (uint32_t)(regs[1]) >> 5; // SIDL bits 5, 6, 7 -> ID bits 0, 1, 2
     eid |= (uint32_t)(regs[2]) << 14; //EID0 bits 0..7 -> ID bits 11..18
     eid |= (uint32_t)(regs[3]) << 22; // EID8 bits 0..7 -> ID bits 19..26
-
     return eid;
+}
+
+/// Changes the mode of the MCP CAN controller to a different `MCP_MODE_*`.
+/// Returns true if the change happened successfully or false otherwise.
+inline int mcpChangeMode(uint8_t newMode)
+{
+    mcpModify(MCP_REG_CANCTRL, MCP_MODEMASK, newMode);
+    return (mcpRead(MCP_REG_CANCTRL) & MCP_MODEMASK) == newMode;
+}
+
+/// Writes the given id and mask pair to MCP CAN's filter 0.
+static void mcpSetFilter0(uint32_t id, uint32_t mask)
+{
+    uint8_t regs[4];
+    mcpPutEID(id, regs);
+    mcpWriteMulti(MCP_REG_RXF0SIDH, sizeof(regs), regs);
+    mcpPutEID(mask, regs);
+    mcpWriteMulti(MCP_REG_RXM0SIDH, sizeof(regs), regs);
 }
 
 /// Initializes the MCP CAN controller attached to SPI,
@@ -192,11 +207,9 @@ static int mcpSetup(uint32_t id, uint32_t mask)
     spiDeselect();
     _delay_ms(1);
 
-    // Enter configuration mode
-    mcpModify(MCP_REG_CANCTRL, MCP_MODEMASK, MCP_MODE_CONFIG);
-    if((mcpRead(MCP_REG_CANCTRL) & MCP_MODEMASK) != MCP_MODE_CONFIG)
+    if(!mcpChangeMode(MCP_MODE_CONFIG))
     {
-        return 0; // Could not change mode
+        return 0;
     }
 
     // Set CAN timings
@@ -205,38 +218,106 @@ static int mcpSetup(uint32_t id, uint32_t mask)
     mcpWrite(MCP_REG_CNF3, MCP_CNF3_VAL);
 
     // Apply filter id & mask to MCP's CAN filter 0.
-    mcpWriteEID(id, MCP_REG_RXF0SIDH);
-    mcpWriteEID(mask, MCP_REG_RXM0SIDH);
+    mcpSetFilter0(id, mask);
 
-    // Enter normal mode
-    mcpModify(MCP_REG_CANCTRL, MCP_MODEMASK, MCP_MODE_NORMAL);
-    if((mcpRead(MCP_REG_CANCTRL) & MCP_MODEMASK) != MCP_MODE_NORMAL)
-    {
-        return 0; // Could not change mode
-    }
+    // NOTE: RXB0CTRL should be 0x00 after the reset that was issued - i.e. set
+    // to use filter 0 to filter ingoing messages, no rollover, no RTR
 
-    return 1;
+    return mcpChangeMode(MCP_MODE_NORMAL);
 }
 
 
+static int inited = 0;
+
 int cnCANInit(uint32_t id, uint32_t mask)
 {
-    // MOSI, SCK and CS as outputs; CS=hi
-    SPI_PORT |= CS_PIN;
-    SPI_DDR |= MOSI_PIN | SCK_PIN | CS_PIN;
+    if(!inited)
+    {
+        // MOSI, SCK and CS as outputs; CS=hi
+        SPI_PORT |= CS_PIN;
+        SPI_DDR |= MOSI_PIN | SCK_PIN | CS_PIN;
 
-    // SPI enabled in master mode, CPHA=0, CPOL=0, MSB first, frequency=fOSC/2
-    SPCR = (1 << SPE) | (1 << MSTR);
-    SPSR |= (1 << SPI2X);
+        // SPI enabled in master mode, CPHA=0, CPOL=0, MSB first, frequency=fOSC/2
+        SPCR = (1 << SPE) | (1 << MSTR);
+        SPSR |= (1 << SPI2X);
 
-    int mcpOk = mcpSetup(id, mask);
-    return mcpOk;
+        inited = mcpSetup(id, mask);
+        return inited;
+    }
+    else
+    {
+        // Just change filters
+        if(!mcpChangeMode(MCP_MODE_CONFIG))
+        {
+            return 0;
+        }
+        mcpSetFilter0(id, mask);
+        return mcpChangeMode(MCP_MODE_NORMAL);
+    }
 }
 
 int cnCANSend(uint32_t id, unsigned len, const uint8_t data[len])
 {
-    // FIXME IMPLEMENT!
-    return -1;
+    len = len > 8 ? len : 8; // Cap length to maximum
+
+    // Check if any transmission mailbox is free
+    spiSelect();
+    spiTransfer(MCP_CMD_READ_STATUS);
+    uint8_t status = spiTransfer(0x00);
+    spiDeselect();
+
+    uint8_t mailboxId;
+    if(!(status & MCP_STATUS_TX0REQ))
+    {
+        mailboxId = 0;
+    }
+    else if(!(status & MCP_STATUS_TX1REQ))
+    {
+        mailboxId = 1;
+    }
+    else if(!(status & MCP_STATUS_TX2REQ))
+    {
+        mailboxId = 2;
+    }
+    else
+    {
+        // No TX mailbox free = can't send any message
+        return -1;
+    }
+
+    uint8_t buffer[13];
+
+    // buffer[0..3] = TXB_SIDH, SIDL, EID8, EID0
+    mcpPutEID(id, buffer);
+
+    // buffer[4] = DLC
+    buffer[4] = (uint8_t)len;
+    if(id & CN_CAN_RTR)
+    {
+        buffer[4] |= MCP_BDLC_RTR;
+    }
+
+    // buffer[5..12] = payload
+    for(unsigned i = 0; i < len; i ++)
+    {
+        buffer[5 + i] = data[i];
+    }
+
+    // Write destination id, data length code and data all in one go
+    spiSelect();
+    spiTransfer(MCP_CMD_LOAD_TXBUF | (uint8_t)(mailboxId << 1));
+    for(unsigned i = 0; i < sizeof(buffer); i ++)
+    {
+        spiTransfer(buffer[i]);
+    }
+    spiDeselect();
+
+    // Request the written-to mailbox to be sent out
+    spiSelect();
+    spiTransfer(MCP_CMD_RTS | (uint8_t)(0x01 << mailboxId));
+    spiDeselect();
+
+    return (int)len;
 }
 
 int cnCANRecv(uint32_t *recvId, unsigned maxLen, uint8_t data[maxLen])

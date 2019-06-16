@@ -48,13 +48,10 @@ int cnTimerStart(uint32_t delayUs, int oneshot, CNtimeoutFunc onTimeout)
 
     // Calculate timer 1's prescaler and count from delay;
     //
-    //      timerFreq = F_CPU / (PSC * (CNT + 1))
-    //   -> 1000000 / delayUs = F_CPU / (PSC * (CNT + 1))
-    //   -> PSC * (CNT + 1) = F_CPU / 1000000 * delayUs
-    //   -> CNT = F_CPU / 1000000 * delayUs / PSC - 1
-    // also CNT <= 65535, so
-    //      72 * delayUs / (PSC + 1) - 1 <= 65535
-    //   -> 72 * delayUs <= 65536 * (PSC + 1)
+    //      timerFreq = F_CPU / (PSC * CNT)
+    //   -> 1000000 / delayUs = F_CPU / (PSC * CNT)
+    //   -> PSC * CNT = F_CPU / 1000000 * delayUs
+    //   -> CNT = F_CPU / 1000000 * delayUs / PSC
     //
     // Hence try all possible prescalers (1, 8, 64, 256, 1024), stopping at the
     // first that works. If none works the delay is too big...
@@ -66,7 +63,7 @@ int cnTimerStart(uint32_t delayUs, int oneshot, CNtimeoutFunc onTimeout)
         (1 << CS12), // 256
         (1 << CS12) | (1 << CS10), // 1024
     };
-    static const unsigned N_PSCS = sizeof(PSCS) / sizeof (PSCS[0]);
+    static const unsigned N_PSCS = sizeof(PSCS) / sizeof(PSCS[0]);
 
     uint32_t cnt = 0xFFFFUL;
     int pscChosen = 0;

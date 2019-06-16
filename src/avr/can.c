@@ -22,7 +22,7 @@
 #define SCK_PIN 0x20
 
 /// Writes `byte` to SPI and returns the received response byte.
-inline uint8_t spiTransfer(uint8_t byte)
+inline static uint8_t spiTransfer(uint8_t byte)
 {
     SPDR = byte;
     while(!(SPSR & (1 << SPIF))) { }
@@ -30,13 +30,13 @@ inline uint8_t spiTransfer(uint8_t byte)
 }
 
 /// Puts the MCP chip select pin low.
-inline void spiSelect(void)
+inline static void spiSelect(void)
 {
     SPI_PORT &= ~CS_PIN;
 }
 
 /// Puts the MCP chip select pin high.
-inline void spiDeselect(void)
+inline static void spiDeselect(void)
 {
     SPI_PORT |= CS_PIN;
 }
@@ -94,7 +94,7 @@ inline void spiDeselect(void)
 #define MCP_
 
 /// Reads a register of the MCP CAN controller.
-inline uint8_t mcpRead(uint8_t addr)
+inline static uint8_t mcpRead(uint8_t addr)
 {
     spiSelect();
     spiTransfer(MCP_CMD_READ);
@@ -105,7 +105,7 @@ inline uint8_t mcpRead(uint8_t addr)
 }
 
 /// Reads `n` registers of the MCP CAN controller, starting from the one at `addr`.
-inline void mcpReadMulti(uint8_t addr, unsigned n, uint8_t outValues[static n])
+inline static void mcpReadMulti(uint8_t addr, unsigned n, uint8_t outValues[static n])
 {
     spiSelect();
     spiTransfer(MCP_CMD_READ);
@@ -118,7 +118,7 @@ inline void mcpReadMulti(uint8_t addr, unsigned n, uint8_t outValues[static n])
 }
 
 /// Writes to a register in the MCP CAN controller.
-inline void mcpWrite(uint8_t addr, uint8_t value)
+inline static void mcpWrite(uint8_t addr, uint8_t value)
 {
     spiSelect();
     spiTransfer(MCP_CMD_WRITE);
@@ -129,7 +129,7 @@ inline void mcpWrite(uint8_t addr, uint8_t value)
 
 /// Write to `n` registers in the MCP CAN controller, starting from the one at
 /// `addr`.
-inline void mcpWriteMulti(uint8_t addr, unsigned n, const uint8_t values[static n])
+inline static void mcpWriteMulti(uint8_t addr, unsigned n, const uint8_t values[static n])
 {
     spiSelect();
     spiTransfer(MCP_CMD_WRITE);
@@ -142,7 +142,7 @@ inline void mcpWriteMulti(uint8_t addr, unsigned n, const uint8_t values[static 
 }
 
 /// Modifies specific bits of the register at `addr` in the MCP CAN controller.
-inline void mcpModify(uint8_t addr, uint8_t mask, uint8_t value)
+inline static void mcpModify(uint8_t addr, uint8_t mask, uint8_t value)
 {
     spiSelect();
     spiTransfer(MCP_CMD_BIT_MODIFY);
@@ -154,7 +154,7 @@ inline void mcpModify(uint8_t addr, uint8_t mask, uint8_t value)
 
 /// Writes the CAN extended identifier in `id` (most significant 29 bits) in the
 /// format of the four xSIDH, xSIDL, xEID8 and xEID0 in the MCP CAN controller.
-inline void mcpPutEID(uint32_t id, uint8_t outRegs[static 4])
+inline static void mcpPutEID(uint32_t id, uint8_t outRegs[static 4])
 {
     outRegs[0] = (id & 0x00003FC0UL) >> 6; // ID bits 3..10 -> SIDH bits 0..7
     outRegs[1] = MCP_RXFSIDL_EXIDE; // Set extended ID bit in SIDL
@@ -167,7 +167,7 @@ inline void mcpPutEID(uint32_t id, uint8_t outRegs[static 4])
 /// Reads a CAN extended identifier (setting the most significant 29 bits of the
 /// return value) that have been read to `regs` in the format of the MCP CAN
 /// controller: xSIDH, xSIDL, xEID8 and xEID0.
-inline uint32_t mcpGetEID(const uint8_t regs[static 4])
+inline static uint32_t mcpGetEID(const uint8_t regs[static 4])
 {
     uint32_t eid = 0;
     eid |= (uint32_t)(regs[0]) << 3; // SIDH bits 0..7 -> ID bits 3..10
@@ -180,7 +180,7 @@ inline uint32_t mcpGetEID(const uint8_t regs[static 4])
 
 /// Changes the mode of the MCP CAN controller to a different `MCP_MODE_*`.
 /// Returns true if the change happened successfully or false otherwise.
-inline int mcpChangeMode(uint8_t newMode)
+inline static int mcpChangeMode(uint8_t newMode)
 {
     mcpModify(MCP_REG_CANCTRL, MCP_MODEMASK, newMode);
     return (mcpRead(MCP_REG_CANCTRL) & MCP_MODEMASK) == newMode;

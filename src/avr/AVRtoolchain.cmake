@@ -26,12 +26,13 @@ set(CMAKE_CXX_COMPILER_TARGET "${AVR_PREFIX}")
 set(CMAKE_CXX_COMPILER_ID GNU)
 set(CMAKE_CXX_COMPILER_FORCED YES)
 
-set(CMAKE_C_FLAGS_DEBUG "-g -Og -mmcu=${AVR_PART} -fstrict-volatile-bitfields")
+set(CMAKE_C_FLAGS_DEBUG "-g -Og -mmcu=${AVR_PART} -flto -fstrict-volatile-bitfields")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
-set(CMAKE_C_FLAGS_RELEASE "-Os -mmcu=${AVR_PART} -fstrict-volatile-bitfields")
+set(CMAKE_C_FLAGS_RELEASE "-Os -mmcu=${AVR_PART} -flto -fstrict-volatile-bitfields")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}")
 
 set(CMAKE_EXE_LINKER_FLAGS_LIST
+    -flto
     -Wl,--section-start=.text=${AVR_BOOTLOADER_SIZE} # Relocate bootloader code
 )
 string(REPLACE ";" " " CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS_LIST}")

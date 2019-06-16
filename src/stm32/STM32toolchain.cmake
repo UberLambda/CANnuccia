@@ -22,9 +22,9 @@ set(CMAKE_CXX_COMPILER_TARGET "${ARM_PREFIX}")
 set(CMAKE_CXX_COMPILER_ID GNU)
 set(CMAKE_CXX_COMPILER_FORCED YES)
 
-set(CMAKE_C_FLAGS_DEBUG "-g -Og -mthumb -mcpu=${ARM_CPU} -fstrict-volatile-bitfields")
+set(CMAKE_C_FLAGS_DEBUG "-g -Og -mthumb -mcpu=${ARM_CPU} -flto -fstrict-volatile-bitfields")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
-set(CMAKE_C_FLAGS_RELEASE "-Os -mthumb -mcpu=${ARM_CPU} -fstrict-volatile-bitfields")
+set(CMAKE_C_FLAGS_RELEASE "-Os -mthumb -mcpu=${ARM_CPU} -flto -fstrict-volatile-bitfields")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}")
 
 # SELF_DIR: the directory where this toolchain file resides
@@ -36,6 +36,7 @@ set(CMAKE_EXE_LINKER_FLAGS_LIST
     "-T${SELF_DIR}/ld/${STM32_PART}.ld"
     -nostdlib
     -nostartfiles
+    -flto
 )
 string(REPLACE ";" " " CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS_LIST}")
 

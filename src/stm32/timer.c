@@ -86,7 +86,7 @@ int cnTimerStart(uint32_t delayUs, int oneshot, CNtimeoutFunc onTimeout)
     //   -> (PSC + 1) * (ARR + 1) = 72MHz * delayUs / 1000000
     //   -> (PSC + 1) * (ARR + 1) = 72 * delayUs
     //   -> ARR = 72 * delayUs / (PSC + 1) - 1
-    // also ARR <= 65555, so
+    // also ARR <= 65535, so
     //      72 * delayUs / (PSC + 1) - 1 <= 65535
     //   -> 72 * delayUs <= 65536 * (PSC + 1)
     //

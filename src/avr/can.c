@@ -322,6 +322,58 @@ int cnCANSend(uint32_t id, unsigned len, const uint8_t data[len])
 
 int cnCANRecv(uint32_t *recvId, unsigned maxLen, uint8_t data[maxLen])
 {
-    // FIXME IMPLEMENT!
-    return -1;
+    // Check if any receiver mailbox is full; give precedence to mailbox 0 over 1
+    spiSelect();
+    spiTransfer(MCP_CMD_RX_STATUS);
+    uint8_t rxStatus = spiTransfer(0x00);
+    spiDeselect();
+
+    uint8_t rxMailboxId;
+    if(rxStatus & MCP_RXSTATUS_RXB0)
+    {
+        rxMailboxId = 0;
+    }
+    else if(rxStatus & MCP_RXSTATUS_RXB1)
+    {
+        rxMailboxId = 1;
+    }
+    else
+    {
+        // No pending message
+        return -1;
+    }
+
+    // Read all mailbox registers in one go
+    spiSelect();
+    spiTransfer(MCP_CMD_READ_RXBUF | (uint8_t)(rxMailboxId << 1));
+
+    // [0..3] = RXB_SIDH, SIDL, EID8, EID0
+    uint8_t regs[4];
+    for(unsigned i = 0; i < sizeof(regs); i ++)
+    {
+        regs[i] = spiTransfer(0x00);
+    }
+    if(recvId)
+    {
+        *recvId = mcpGetEID(regs);
+    }
+
+    // [4] = DLC (incl. RTR bit)
+    uint8_t dlc = spiTransfer(0x00);
+    if((dlc & MCP_BDLC_RTR) && recvId)
+    {
+        *recvId |= CN_CAN_RTR;
+    }
+    unsigned recvdLen = dlc & 0x0F;
+
+    // [5..(5+dataLen)] = payload
+    unsigned len = 0;
+    for(len = 0; len < recvdLen && len < maxLen; len ++)
+    {
+        data[len] = spiTransfer(0x00);
+    }
+
+    spiDeselect(); // (RXnIF in CANINTF is cleared automatically, marking the mailbox as read)
+
+    return (int)len;
 }

@@ -86,10 +86,12 @@ int main(void)
             // Always answer with stats after a PROG_REQ (even if we already were not IDLE):
             // 1. log2(size of a flash page): U8
             // 2. Total number of flash pages: U16
+            // 3. ELF machine type (e_machine): U16
             outMsgId = cnCANDevMask(CN_CAN_MSG_PROG_REQ_RESP, devId);
             outMsgData[0] = (uint8_t)cnLog2I(CN_FLASH_PAGE_SIZE);
-            cnWriteU16LE(outMsgData, (uint16_t)(cnFlashSize() / CN_FLASH_PAGE_SIZE));
-            cnCANSend(outMsgId, 3, outMsgData);
+            cnWriteU16LE(outMsgData + 1, (uint16_t)(cnFlashSize() / CN_FLASH_PAGE_SIZE));
+            cnWriteU16LE(outMsgData + 3, CN_E_MACHINE);
+            cnCANSend(outMsgId, 5, outMsgData);
             break;
 
         case CN_CAN_MSG_UNLOCK:

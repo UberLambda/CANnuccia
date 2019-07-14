@@ -50,7 +50,7 @@ int main(void)
     cnDebugLed(1);
 
     // Only listen to CAN messages from master to this device
-    uint8_t devId = 0xFE; // FIXME READ REAL ADDRESS FROM OPTION BYTES/EEPROM
+    uint8_t devId = cnReadDevId();
     uint32_t txFilterId = cnCANDevMask(CN_CAN_TX_FILTER_ID, devId);
     cnCANInit(txFilterId, CN_CAN_TX_FILTER_MASK);
 

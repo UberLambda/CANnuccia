@@ -8,6 +8,7 @@
 #include "common/flash.h"
 
 #include <avr/boot.h>
+#include <avr/eeprom.h>
 #include <avr/interrupt.h>
 
 // FIXME: Values are hardcoded for ATMega328p!
@@ -96,6 +97,11 @@ int cnFlashEndWrite(void)
 
     curPageAddr = 0;
     return 1;
+}
+
+uint8_t cnReadDevId(void)
+{
+    return eeprom_read_byte((const uint8_t *)0x00);
 }
 
 

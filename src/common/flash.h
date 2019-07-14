@@ -65,6 +65,12 @@ unsigned cnFlashFill(uintptr_t offset, unsigned size, const uint8_t data[size]);
 /// On AVR: copies the internal scrap page to the actual page to program in flash.
 int cnFlashEndWrite(void);
 
+/// Reads this CANnuccia device's id.
+///
+/// On STM32: reads the Data0 option byte.
+/// On AVR: reads the byte from EEPROM at address 0x00.
+uint8_t cnReadDevId(void);
+
 /// Jumps from the bootloader to the user program.
 void cnJumpToProgram(void);
 

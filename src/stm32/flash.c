@@ -146,6 +146,11 @@ int cnFlashEndWrite(void)
     return 1;
 }
 
+uint8_t cnReadDevId(void)
+{
+    return (FLASH->OBR & 0x0003FC00) >> 10; // data0: [10..17]
+}
+
 
 typedef void(*ResetHandler)(void);
 

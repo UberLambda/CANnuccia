@@ -95,9 +95,15 @@ int main(void)
             break;
 
         case CN_CAN_MSG_UNLOCK:
-            if(state == IDLE)
+            if(state >= LOCKED)
             {
-                int unlocked = cnFlashUnlock();
+                // Send a MSG_UNLOCKED if we are already unlocked or if unlocking is successfull
+                int unlocked = 1;
+                if(state == LOCKED)
+                {
+                    unlocked = cnFlashUnlock();
+                }
+
                 if(unlocked)
                 {
                     state = UNLOCKED;

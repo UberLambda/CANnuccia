@@ -1,3 +1,11 @@
+// CANnuccia/src/stm32/startup.c - STM32 vector table and core startup ISRs
+//
+// Copyright (c) 2019, Paolo Jovon <paolo.jovon@gmail.com>
+//
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+//
 // *****************************************************************************
 // Based on code from https://github.com/al95/STM32-Bare-Metal/blob/master/init.c
 //                                                                             
@@ -23,6 +31,37 @@
 // *****************************************************************************
 
 #include "common/cc.h"
+#include <stdint.h>
+
+
+// See the STM32F10X manual, RCC (medium density devices) section
+#define RCC_CR (*(volatile uint32_t *)0x40021000)
+#define RCC_CR_PLLRDY 0x02000000u
+#define RCC_CR_PLLON 0x01000000u
+#define RCC_CR_HSERDY 0x00020000u
+#define RCC_CR_HSEON 0x00010000u
+#define RCC_CR_HSION 0x00000001u
+#define RCC_CFGR (*(volatile uint32_t *)0x40021004)
+#define FLASH_ACR (*(volatile uint32_t *)0x40022000)
+#define FLASH_ACR_PRFTBE 0x00000010u
+
+/// Enables the 8MHz external crystal to get a 72MHz PLL clock
+// See: https://www.stm32duino.com/viewtopic.php?t=4190
+static void enableHSE(void)
+{
+    RCC_CR |= RCC_CR_HSEON; // Enable external crystal
+    while(!(RCC_CR & RCC_CR_HSERDY)) { } // Wait for crystal...
+
+    FLASH_ACR = FLASH_ACR_PRFTBE | 0x2; // Flash prefetch on, 2 flash wait states (clock > 48MHz)
+    RCC_CFGR |= 0x5d0400u; // No clock out, USB clock /1.5, PLL is (HSE x9), APB1 clock /2
+
+    RCC_CR |= RCC_CR_PLLON; // Enable PLL
+    while(!(RCC_CR & RCC_CR_PLLRDY)) { } // Wait for PLL...
+
+    RCC_CFGR |= 0x2; // Set PLL as system clock source
+    while(!(RCC_CFGR & 0x8)) { } // Wait for clock source to change...
+}
+
 
 /// An ISR that spinlocks forever.
 /// Used as a fallback for when no real ISR is implemented.
@@ -43,18 +82,27 @@ CN_NORETURN void resetHandler(void)
     extern char _data_start; // ORIGIN(.data)
     extern char _data_end; // ORIGIN(.data) + LENGTH(.data)
     extern char _data_load_addr; // LOADADDR(.data)
+    extern char _bss_start; // ORIGIN(.bss)
+    extern char _bss_end; // ORIGIN(.bss) + LENGTH(.bss)
 
     // Enable 8-byte stack alignment to comply with AAPCS
     //BIT_SET(SCB->CCR, BIT_9);
 
     // Copy .data from FLASH to RAM
-    char *src = &_data_load_addr, *dst = &_data_start, *dataEnd = &_data_end;
-    while(dst < dataEnd)
+    char *src = &_data_load_addr, *dst = &_data_start, *end = &_data_end;
+    while(dst < end)
     {
         *dst++ = *src++;
     }
 
-    // (.bss is zero-filled by the linker script)
+    // Zero-fill .bss on RAM
+    dst = &_bss_start; end = &_bss_end;
+    while(dst < end)
+    {
+        *dst++ = 0;
+    }
+
+    enableHSE();
 
     main();
     hcf();
@@ -63,6 +111,8 @@ CN_NORETURN void resetHandler(void)
 /// The stack's start address. Stack starts at the bottom of RAM and grows up.
 /// 0x20005000: RAM bottom (0x20000000) + RAM size (0x5000, i.e. 20KB)
 #define STACK_START_ADDR 0x20005000
+
+extern void tim2Handler(void); // from "stm32/timer.c"
 
 /// ARM Cortex-M3 Interrupt vector table.
 typedef void(*ISR)(void);
@@ -116,7 +166,7 @@ ISR isrs[] CN_SECTION(".isrs") =
     hcf,                  // TIM1_UP       
     hcf,                  // TIM1_TRG_COM  
     hcf,                  // TIM1_CC       
-    hcf,                  // TIM2          
+    tim2Handler,          // TIM2
     hcf,                  // TIM3          
     hcf,                  // TIM4          
     hcf,                  // I2C1_EV       

@@ -1,5 +1,11 @@
 /*
- * STM32F103C8 linker script.
+ * CANnuccia/src/stm32/ld/stm32f103c8.ld - STM32F103C8 linker script
+ *
+ * Copyright (c) 2019, Paolo Jovon <paolo.jovon@gmail.com>
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  *
  *******************************************************************************
  * Based on: https://github.com/al95/STM32-Bare-Metal/blob/master/STM32F103C8.ld
@@ -30,9 +36,13 @@
 /* The ISR run when the chip is reset. */
 ENTRY(resetHandler);
 
+_flash_size = 64K;
+_flash_start = 0x08000000;
+_flash_end = _flash_start + _flash_size;
+
 MEMORY
 {
-    FLASH(rx) : ORIGIN = 0x08000000, LENGTH = 64K
+    FLASH(rx) : ORIGIN = _flash_start, LENGTH = _flash_size
     RAM(rwx) : ORIGIN = 0x20000000, LENGTH = 20K
 }
 
@@ -81,7 +91,7 @@ SECTIONS
     /* Uninitialized or zero-filled R/W data. Basically just a zero-filled chunk
      * of RAM; holds uninitialized variables or variables initialized to only
      * contains zeroes (ex. `long foo = 0;`).
-     * `=0` makes the section zero-filled.
+     * Needs to be zero-filled by the program on chip reset.
      */
     .bss :
     {
@@ -91,6 +101,6 @@ SECTIONS
         *(COMMON)
         . = ALIGN(4);
         _bss_end = .;
-    } >RAM =0
+    } >RAM
 }
 

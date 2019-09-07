@@ -10,7 +10,7 @@ See [CANale](https://github.com/UberLambda/CANale) for a tool to upload firmware
 
 ## Usage
 Devices on a CANnuccia network have an 8-bit identifier (stored in the Data0 option byte on STM32 and on byte 0 of EEPROM on AVR).
-CANnuccia starts on chip reset, reads this id, and sets CAN filters accordingly to listen for commands for the target device; see `docs/CANnuccia.xlsx` for more information on the protocol.  
+CANnuccia starts on chip reset, reads this id, and sets CAN filters accordingly to listen for commands for the target device; see [docs/CANnuccia.xlsx](docs/CANnuccia.xlsx) for more information on the protocol.  
 If no CANnuccia command is received within a timeout (or when a "programming done" command is received), CANnuccia terminates and jumps to the user program.
 
 ## Prerequisites
